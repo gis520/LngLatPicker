@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <title>地图坐标拾取器</title>
+    <style type="text/css">
+    .line {
+        margin-bottom: 20px;
+    }
+    /* 复制提示 */
+    
+    .copy-tips {
+        position: fixed;
+        z-index: 999;
+        bottom: 50%;
+        left: 50%;
+        margin: 0 0 -20px -80px;
+        background-color: rgba(0, 0, 0, 0.2);
+        filter: progid: DXImageTransform.Microsoft.Gradient(startColorstr=#30000000, endColorstr=#30000000);
+        padding: 6px;
+    }
+    
+    .copy-tips-wrap {
+        padding: 10px 20px;
+        text-align: center;
+        border: 1px solid #F4D9A6;
+        background-color: #FFFDEE;
+        font-size: 14px;
+    }
+    
+    html {
+        height: 100%
+    }
+    
+    body {
+        height: 100%;
+        margin: 0px;
+        padding: 0px;
+        background-color: bisque;
+    }
+    .space-left{
+    	margin-left: 35px;
+    }
+    #map {
+        height: 100%
+    }
+    </style>
+    <meta name="description" content="地图坐标拾取器，坐标定位，坐标转换器">
+    <meta name="author" content="giscafer">
+    <!--页面更好的在移动平台上展示-->
+    <meta name="viewport" content="initial-scale=1.1,user-scalable=no">
+    <meta name="keywords" content="gis520地图,GIS520,地图坐标拾取器,地图坐标转换器">
+    <link rel="shortcut icon" href="http://www.gis520.com/favicon.ico">
+    <script src="http://code.jquery.com/jquery-2.0.1.min.js"></script>
+    <script src="http://webapi.amap.com/maps?v=1.3&key=b8de4cd1c32ebd939282e7fb176429b3" type="text/javascript"></script>
+    <script type="text/javascript" src="js/jquery.zclip.js"></script>
+    <script src="js/LnglatWidget.js"></script>
+    <script type="text/javascript">
+    var mapObj;
+    var placeSearch, geocoderTool;
+
+    function init() {
+        var position = new AMap.LngLat(116.397428, 39.90923);
+        mapObj = new AMap.Map("map", {
+            view: new AMap.View2D({
+                center: position,
+                zoom: 14,
+                rotation: 0
+            }),
+            lang: "zh_cn"
+        });
+        //使用CSS默认样式定义地图上的鼠标样式
+        mapObj.setDefaultCursor("pointer");
+        //加载工具
+        mapObj.plugin(["AMap.ToolBar"], function() {
+            var tool = new AMap.ToolBar({
+                autoPosition: true
+            });
+            mapObj.addControl(tool);
+            //动态定位
+            // tool.doLocation();
+        });
+        //搜索
+        mapObj.plugin(["AMap.PlaceSearch", "AMap.Geocoder", "AMap.MapType", "AMap.Scale"], function() {
+            placeSearch = new AMap.PlaceSearch({
+                city: "全国"
+            });
+            geocoderTool = new AMap.Geocoder({
+                radius: 1000, //以已知坐标为中心点，radius为半径，返回范围内兴趣点和道路信息
+                extensions: "all" //返回地址描述以及附近兴趣点和道路信息，默认“base”
+            });
+            //地图类型切换
+            var type = new AMap.MapType({
+                defaultType: 0 //使用2D地图
+            });
+            mapObj.addControl(type);
+            //地图比例尺
+            var scale = new AMap.Scale();
+            mapObj.addControl(scale);
+            //返回地理编码结果
+            AMap.event.addListener(geocoderTool, "complete", LnglatWidget.geocoder_CallBack);
+            //
+            AMap.event.addListener(placeSearch, "complete", LnglatWidget.placeSearch_CallBack);
+        });
+
+        //鼠标获取经纬度事件
+        AMap.event.addListener(mapObj, 'click', LnglatWidget.getLngLat);
+        //关键词搜索事件
+        var searchBtn = document.getElementById("search");
+        if (searchBtn.attachEvent) {
+            searchBtn.attachEvent("onclick", LnglatWidget.searchByKeyword);
+        } else if (searchBtn.addEventListener) {
+            searchBtn.addEventListener("click", LnglatWidget.searchByKeyword);
+        }
+    }
+    </script>
+</head>
+
+<body onload="init()">
+    <div style="float: left;width: 20%">
+        <div style="background-color: bisque;">
+            &nbsp;&nbsp;<img src="images/logo.png" />
+        </div>
+        <br />
+        <p style="background-color: bisque;">&nbsp;&nbsp;地图坐标拾取器，鼠标点击地图即可获取经纬度坐标</p>
+        <div style="position:absolute;top:40%;">
+            <div id="searchDIV">
+                &nbsp;&nbsp;
+                <input type="radio" name="searchTypeButton" value="serachByName" checked>地名搜索</input>&nbsp;&nbsp;
+                <input type="radio" name="searchTypeButton" value="serachByLngLat">坐标定位</input>
+                <br /> &nbsp;&nbsp;
+                <input id="searchTxt" name="search" value="" />&nbsp;&nbsp;
+                <input id="search" type="button" value="搜索" />
+                <p class="space-left">提示：地名搜索仅支持国内城市</p>
+            </div>
+            <br />
+            <br />
+            <br />
+            <div id="lnglatDIV" class="line">
+                &nbsp;&nbsp;&nbsp;坐标获取结果：
+                <br /> &nbsp;&nbsp;
+                <input id="lnglatTxt" type="text" class="input" name="lnglatTxt" />&nbsp;&nbsp;
+                <a href="#" class="copy-input" onclick="LnglatWidget.clipBoard()">复制坐标</a>
+            </div>
+        </div>
+        <footer style="position:absolute;bottom:0px;">
+            <p style="background-color: bisque;">&nbsp;&nbsp;<a href="http://www.gis520.com">GIS520社区</a>&nbsp;&nbsp;&nbsp;源码：<a href="http://bbs.gis520.com">Fork in Github</a></p>
+            <p>
+                &nbsp;&nbsp;&copy;2014 giscafer
+            </p>
+        </footer>
+    </div>
+    <div id="map" style="float: right;width: 80%">
+    </div>
+</body>
+
+</html>
